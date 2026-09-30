@@ -131,7 +131,7 @@ Test your completed agentic skills by passing your prompts to `agy`:
 
 **Prompt 1 (Triggering Skill 1):**
 
-Design an ERD for a library management system with books, borrowers, and loans. Make sure to be specific in your prompt with business decisions you make to remove ambiguity for the agent.
+Design an ERD for a library management system with users, books, genres, authors, borrowers, loans. Note that the relation for users has already been created. Make sure to be specific in your prompt with business decisions you make to remove ambiguity for the agent.
 
 Verify that `docs/architecture/schema.mmd` and `docs/architecture/erd.svg` are created in your repository.
 
