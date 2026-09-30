@@ -24,25 +24,35 @@ By completing this assignment, you will demonstrate how to constrain generative 
 ### Prerequisites
 
 - **Node.js:** LTS installed.
+- **Docker & Docker Compose:** Installed and running (for local PostgreSQL database).
 - **Antigravity CLI (`agy`):** Installed, logged in, and accessible in your shell environment.
 - **NPM Package Manager:** `npm` (included with Node.js).
 
 ---
 
-### Step 1: Install Dependencies
+### Step 1: Install Dependencies & Start Database
 
-Install the project dependencies, which include Kysely, TypeScript, and `@mermaid-js/mermaid-cli`:
+Install the project dependencies and launch the PostgreSQL container:
 
 ```bash
+# Install dependencies
 npm install
 
+# Start PostgreSQL database container in background
+docker compose up -d
+```
+
+To stop the database container when you are done:
+
+```bash
+docker compose down
 ```
 
 ---
 
 ### Step 2: Verify the Existing Migration Setup
 
-The starter repository includes an initial Kysely database migration (`src/db/migrations/001_initial_schema.ts`) and a migration execution script configured in `package.json`.
+The starter repository includes an initial Kysely database migration (`src/db/migrations/001_initial_schema.ts`) and migration execution scripts configured in `package.json`.
 
 Verify that your environment compiles and runs migrations cleanly:
 
@@ -53,6 +63,8 @@ npm run build
 # Run existing migrations
 npm run migrate:up
 
+# Roll back the migration (optional check)
+npm run migrate:down
 ```
 
 ---
