@@ -1,0 +1,85 @@
+name: Push Audit & Academic Integrity
+
+on:
+  push:
+    branches: ["**"]
+
+jobs:
+  record-push:
+    name: Record Submission & Audit Timestamp
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record Push Audit Data
+        run: |
+          mkdir -p .audit
+          SERVER_TIME_UTC=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          SERVER_TIME_ISO=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          PUSHER="${{ github.actor }}"
+          AUTHOR_NAME="${{ github.event.head_commit.author.name }}"
+          AUTHOR_EMAIL="${{ github.event.head_commit.author.email }}"
+          COMMIT_SHA="${{ github.sha }}"
+          BRANCH="${{ github.ref_name }}"
+
+          # Check for mismatch between GitHub pusher account and git commit author
+          AUTHOR_MISMATCH="No"
+          if [[ -n "$PUSHER" && -n "$AUTHOR_NAME" ]]; then
+            # Simple heuristic check
+            if [[ "${PUSHER,,}" != "${AUTHOR_NAME,,}" && "${AUTHOR_EMAIL,,}" != *"${PUSHER,,}"* ]]; then
+              AUTHOR_MISMATCH="Flagged for review (Pusher: $PUSHER vs Author: $AUTHOR_NAME)"
+            fi
+          fi
+
+          # Generate structured JSON audit log
+          cat <<EOF > .audit/audit-record.json
+          {
+            "server_timestamp_utc": "$SERVER_TIME_ISO",
+            "pusher_username": "$PUSHER",
+            "commit_sha": "$COMMIT_SHA",
+            "branch": "$BRANCH",
+            "commit_author_name": "$AUTHOR_NAME",
+            "commit_author_email": "$AUTHOR_EMAIL",
+            "commit_message": $(echo "${{ github.event.head_commit.message }}" | jq -sR .),
+            "author_mismatch_flag": "$AUTHOR_MISMATCH",
+            "workflow_run_id": "${{ github.run_id }}",
+            "repository": "${{ github.repository }}"
+          }
+          EOF
+
+          # Format GitHub Step Summary for instructors and TAs
+          echo "## 🛡️ Push Audit & Submission Timestamp" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Authoritative Server Timestamp:** This timestamp was recorded directly by GitHub servers upon push receipt and cannot be altered locally." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Server Timestamp (UTC)** | \`$SERVER_TIME_UTC\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **GitHub Pusher** | \`$PUSHER\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit Author** | \`$AUTHOR_NAME <$AUTHOR_EMAIL>\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Author Match Check** | $AUTHOR_MISMATCH |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`$BRANCH\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit SHA** | \`$COMMIT_SHA\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit Message** | ${{ github.event.head_commit.message }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📄 Modified Files in This Push" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          git diff-tree --no-commit-id --name-status -r "$COMMIT_SHA" >> $GITHUB_STEP_SUMMARY || echo "Initial commit or no diff" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📜 Recent Commit History (Incremental Progress Check)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          git log -n 10 --pretty=format:"%h - %an (%ae), %ad : %s" --date=iso >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Audit Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: push-audit-${{ github.sha }}
+          path: .audit/audit-record.json
+          retention-days: 90
