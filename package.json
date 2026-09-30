@@ -1,0 +1,20 @@
+{
+  "name": "fall-2026-assignment-04",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "migrate:up": "tsx src/db/migrator.ts",
+    "migrate:down": "tsx src/db/migrator.ts down"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.13",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "kysely": "^0.29.6",
+    "pg": "^8.23.0"
+  }
+}
